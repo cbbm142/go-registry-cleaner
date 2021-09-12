@@ -2,6 +2,7 @@ defaultDays: 30
 defaultTags:
   - latest
   - prod
+dryRun: true
 host: registry.example.com 
 repos:
   - name: repo/name

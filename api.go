@@ -1,118 +1,90 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 )
 
-type authResponse struct {
-	realm, service, scope string
-}
-
 type apiReqData struct {
-	method, url, body, token, header string
+	method, url, body, headerDirective, header string
 }
 
 func (call *apiReqData) apiDefaults() {
 	if call.method == "" {
 		call.method = "GET"
 	}
-	if call.header == "" {
-		call.header = "Authentication"
-	}
-	if call.token == "" {
-		call.token = "Bearer " + bearerToken
-	}
+	call.url = registryUrl + call.url
 }
 
 func apiRequest(reqInfo apiReqData) *http.Response {
-
-	// Don' load defaults if no token present
-	if bearerToken != "" {
-		reqInfo.apiDefaults()
-	}
+	reqInfo.apiDefaults()
 	client := &http.Client{}
 	req, err := http.NewRequest(reqInfo.method, reqInfo.url, strings.NewReader(reqInfo.body))
 	errCheck(err)
-	// tokenBuild := "Bearer " + base64.StdEncoding.EncodeToString([]byte(registryToken))
 	if reqInfo.header != "" {
-		req.Header.Add(reqInfo.header, reqInfo.token)
+		req.Header.Add(reqInfo.header, reqInfo.headerDirective)
 	}
 	resp, err := client.Do(req)
 	errCheck(err)
 	return resp
 }
 
-// func basicAuth() string {
-// 	tokenBuilder := strings.Builder{}
-// 	tokenBuilder.WriteString("Basic ")
-// 	tokenBuilder.WriteString(base64.StdEncoding.EncodeToString([]byte(registryToken)))
-// 	return tokenBuilder.String()
-// }
-
-// func makeAuth(auth authResponse) string {
-// 	authRequestBuilder := strings.Builder{}
-// 	authRequestBuilder.WriteString(auth.realm)
-// 	authRequestBuilder.WriteString("?service=")
-// 	authRequestBuilder.WriteString(auth.service)
-// 	authRequestBuilder.WriteString("&scope=")
-// 	authRequestBuilder.WriteString(auth.scope)
-// 	return authRequestBuilder.String()
-// }
-
-func parseAuth(authHeader string) {
-	var authDirectives authResponse = authResponse{}
-	for _, directive := range strings.Split(authHeader, ",") {
-		fmt.Println(directive)
-		switch {
-		case strings.Contains(directive, "Bearer realm"):
-			authDirectives.realm = strings.Split(directive, "\"")[1]
-		case strings.Contains(directive, "service"):
-			authDirectives.service = strings.Split(directive, "\"")[1]
-		case strings.Contains(directive, "scope"):
-			authDirectives.scope = strings.Split(directive, "\"")[1]
+func deleteDigest(name string, digest string, tag string, dryRun bool) {
+	fmt.Printf("Deleting digest %s for tag %s for repo %s.", digest, tag, name)
+	if !dryRun {
+		req := apiReqData{
+			url:    name + "/manifests/" + digest,
+			method: "DELETE",
+		}
+		resp := apiRequest(req)
+		if resp.StatusCode != 202 {
+			log.Fatalf("There was an error while attempting to delete %s", digest)
 		}
 	}
-	getToken(authDirectives)
 }
 
-func getTags(repo interface{}) *http.Response {
-	// resp, err := http.Get(registryUrl + repo.(map[string]interface{})["name"].(string) + "/tags/list/")
+func getImageDigest(name string, tag string) string {
+	// Same endpoint as manifests, but adding header make registry reply with digest
 	req := apiReqData{
-		// url:    registryUrl + "/namespaces/" + repo.(map[string]interface{})["name"].(string) + "/tags/list/",
-		url:    registryUrl + "namespaces/cbbm142/repositories/canvas/images-summary",
-		method: "GET",
+		url:             name + "/manifests/" + tag,
+		header:          "Accept",
+		headerDirective: "application/vnd.docker.distribution.manifest.v2+json",
 	}
 	resp := apiRequest(req)
-	// authresp := parseAuth(resp.Header["Www-Authenticate"])
-	fmt.Println(registryUrl + "namespaces/cbbm142/repositories/images-summary")
-	fmt.Println(registryUrl + repo.(map[string]interface{})["name"].(string) + "/tags/lists/")
-	// errCheck(err)
-	return resp
+	return resp.Header["Docker-Content-Digest"][0]
 }
 
-func getToken(auth authResponse) {
-
-	var params = make(map[string]string)
-	params["realm"] = auth.realm
-	params["service"] = auth.service
-	params["scope"] = auth.scope
-	jsonParams, err := json.Marshal(&params)
-	errCheck(err)
+func getTags(name string) []string {
 	req := apiReqData{
-		url:    auth.realm,
-		body:   string(jsonParams),
-		header: "Authentication",
-		token:  "cbbm142, 4dfd0fdf-d773-4549-bea4-29eb1bd45a49",
+		url: name + "/tags/list/",
 	}
 	resp := apiRequest(req)
-	token := make(map[string]string)
-	body, err := ioutil.ReadAll(resp.Body)
-	errCheck(err)
-	json.Unmarshal([]byte(body), &token)
-	bearerToken = token["token"]
+	body := decodeBody(resp)
+	intTags := body.(map[string]interface{})["tags"].([]interface{})
+	var tags []string = nil
+	for _, tag := range intTags {
+		tags = append(tags, tag.(string))
+	}
+	return tags
+}
+
+func getManifest(name string, tag string) (string, string) {
+	req := apiReqData{
+		url: name + "/manifests/" + tag,
+	}
+	resp := apiRequest(req)
+	body := decodeBody(resp)
+	// Only care about newest layer
+	manifest := body.(map[string]interface{})["fsLayers"].([]interface{})[0].(map[string]interface{})["blobSum"].(string)
+	v1compat := body.(map[string]interface{})["history"].([]interface{})[0].(map[string]interface{})["v1Compatibility"].(string)
+	var creationTime string = ""
+	for _, v := range strings.Split(v1compat, ",") {
+		if strings.Contains(v, "created") {
+			creationTime = strings.Split(strings.Split(v, "\"")[3], "T")[0]
+		}
+	}
+	return manifest, creationTime
 
 }

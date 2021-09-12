@@ -1,22 +1,45 @@
 package main
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
-func buildUrl(host interface{}, token string) string {
+func decodeBody(resp *http.Response) interface{} {
+	var body interface{}
+	jsonBody, err := ioutil.ReadAll(resp.Body)
+	errCheck(err)
+	json.Unmarshal([]byte(jsonBody), &body)
+	return body
+}
+
+func buildUrl(host interface{}) string {
 	builder := strings.Builder{}
 	builder.WriteString("https://")
-	// builder.WriteString("cbbm142:")
-	// builder.WriteString(registryToken)
-	// builder.WriteString("@")
+	builder.WriteString(registryUser)
+	builder.WriteString(":")
+	builder.WriteString(registryPassword)
+	builder.WriteString("@")
 	builder.WriteString(host.(string))
 	builder.WriteString("/v2/")
 	return builder.String()
+}
+
+func checkTag(tag string) bool {
+	var checkTag bool = true
+	for _, skipTag := range ignoreValues.tags {
+		if tag == skipTag.(string) {
+			checkTag = false
+		}
+	}
+	return checkTag
 }
 
 func combineTags(repo interface{}, ignoreValues *ignores) {
@@ -45,6 +68,17 @@ func readConfig(configFile string) map[interface{}]interface{} {
 	yamlData := make(map[interface{}]interface{})
 	errCheck(yaml.Unmarshal(yamlFile, &yamlData))
 	return yamlData
+}
+
+func checkStale(date string, ignoreValues ignores) bool {
+	var splitDate []int
+	for _, v := range strings.Split(date, "-") {
+		int, _ := strconv.Atoi(v)
+		splitDate = append(splitDate, int)
+	}
+	timeDate := time.Date(splitDate[0], time.Month(splitDate[1]), splitDate[2], 0, 0, 0, 0, time.UTC)
+	age := time.Since(timeDate).Hours() / 24
+	return age > float64(ignoreValues.days)
 }
 
 func setDays(defaultDays interface{}, repo interface{}, ignoreValues *ignores) {

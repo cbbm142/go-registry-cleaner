@@ -1,9 +1,10 @@
 package main
 
+// Removes stale images from a self hosted registry
+
 import (
-	"fmt"
-	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -14,30 +15,36 @@ type ignores struct {
 }
 
 var ignoreValues ignores = ignores{}
-var bearerToken, registryToken, registryUrl string = "", "", ""
+var configFile, registryPassword, registryUrl, registryUser string = "", "", "", ""
 
 func main() {
-	const configFile string = "config.yml"
+	configFile = "config.yml"
 	config := readConfig(configFile)
 	ignoreValues = ignores{
 		tags: config["defaultTags"].([]interface{}),
 		days: config["defaultDays"].(int),
 	}
 	errCheck(godotenv.Load())
-	registryToken = os.Getenv("token")
-	registryUrl = buildUrl(config["host"], registryToken)
-	fmt.Println(registryUrl)
+	registryUser = os.Getenv("username")
+	registryPassword = os.Getenv("password")
+	registryUrl = buildUrl(config["host"])
+	dryRun, err := strconv.ParseBool(config["dryRun"].(string))
+	errCheck(err)
 	for _, repo := range config["repos"].([]interface{}) {
-		log.Println(repo)
-		fmt.Println(ignoreValues.tags)
+		var name string = repo.(map[string]interface{})["name"].(string)
 		combineTags(repo, &ignoreValues)
 		setDays(config["defaultDays"], repo, &ignoreValues)
-		if bearerToken == "" {
-			resp := getTags(repo)
-			parseAuth(resp.Header["Www-Authenticate"][0])
+		registryTags := getTags(name)
+		for _, tag := range registryTags {
+			if checkTag(tag) {
+				// Creation time is associated with manifests
+				_, creationTime := getManifest(name, tag)
+				if checkStale(creationTime, ignoreValues) {
+					// Deletion is done via digest not tag/manifest
+					digest := getImageDigest(name, tag)
+					deleteDigest(name, digest, tag, dryRun)
+				}
+			}
 		}
-		fmt.Println(bearerToken)
-		foundTags := getTags(repo)
-		fmt.Println(foundTags)
 	}
 }
