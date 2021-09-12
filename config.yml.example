@@ -1,0 +1,10 @@
+defaultDays: 30
+defaultTags:
+  - latest
+  - prod
+host: registry.example.com 
+repos:
+  - name: repo/name
+    tags:
+      - latest
+    days: 365
