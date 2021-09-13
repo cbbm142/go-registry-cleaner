@@ -16,7 +16,8 @@ func decodeBody(resp *http.Response) interface{} {
 	var body interface{}
 	jsonBody, err := ioutil.ReadAll(resp.Body)
 	errCheck(err)
-	json.Unmarshal([]byte(jsonBody), &body)
+	err = json.Unmarshal([]byte(jsonBody), &body)
+	errCheck(err)
 	return body
 }
 
