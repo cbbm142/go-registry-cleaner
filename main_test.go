@@ -11,7 +11,7 @@ var ignoreTags = []string{"latest", "prod"}
 func init() {
 	configFile = "config.yml.example"
 	config = readConfig(configFile)
-	var ignoreValues = ignores{
+	ignoreValues = ignores{
 		days: 30,
 	}
 	for _, val := range ignoreTags {
