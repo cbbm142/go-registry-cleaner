@@ -11,6 +11,6 @@ I make no guarantees this works correctly, and you should always use the dryRun 
 
 ### T0DO 
 
-- Increase test coverage, automate with Github actions
+- Increase test coverage
 - Make use of bearer functions to enable auth with bearer tokens
-- Publish container image
+
