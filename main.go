@@ -4,7 +4,6 @@ package main
 
 import (
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -28,8 +27,7 @@ func main() {
 	registryUser = os.Getenv("username")
 	registryPassword = os.Getenv("password")
 	registryUrl = buildUrl(config["host"])
-	dryRun, err := strconv.ParseBool(config["dryRun"].(string))
-	errCheck(err)
+	dryRun := config["dryRun"].(bool)
 	for _, repo := range config["repos"].([]interface{}) {
 		var name string = repo.(map[string]interface{})["name"].(string)
 		combineTags(repo, &ignoreValues)
@@ -42,7 +40,8 @@ func main() {
 				if checkStale(creationTime, ignoreValues) {
 					// Deletion is done via digest not tag/manifest
 					digest := getImageDigest(name, tag)
-					deleteDigest(name, digest, tag, dryRun)
+					err := deleteDigest(name, digest, tag, dryRun)
+					errCheck(err)
 				}
 			}
 		}

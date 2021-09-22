@@ -1,8 +1,8 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -11,38 +11,39 @@ type apiReqData struct {
 	method, url, body, headerDirective, header string
 }
 
-func (call *apiReqData) apiDefaults() {
-	if call.method == "" {
-		call.method = "GET"
+func (setDefault *apiReqData) apiDefaults() {
+	if setDefault.method == "" {
+		setDefault.method = "GET"
 	}
-	call.url = registryUrl + call.url
+	setDefault.url = registryUrl + setDefault.url
 }
 
-func apiRequest(reqInfo apiReqData) *http.Response {
-	reqInfo.apiDefaults()
+func (apiCall apiReqData) apiRequest() *http.Response {
+	apiCall.apiDefaults()
 	client := &http.Client{}
-	req, err := http.NewRequest(reqInfo.method, reqInfo.url, strings.NewReader(reqInfo.body))
+	req, err := http.NewRequest(apiCall.method, apiCall.url, strings.NewReader(apiCall.body))
 	errCheck(err)
-	if reqInfo.header != "" {
-		req.Header.Add(reqInfo.header, reqInfo.headerDirective)
+	if apiCall.header != "" {
+		req.Header.Add(apiCall.header, apiCall.headerDirective)
 	}
 	resp, err := client.Do(req)
 	errCheck(err)
 	return resp
 }
 
-func deleteDigest(name string, digest string, tag string, dryRun bool) {
+func deleteDigest(name string, digest string, tag string, dryRun bool) error {
 	fmt.Printf("Deleting digest %s for tag %s for repo %s.", digest, tag, name)
 	if !dryRun {
 		req := apiReqData{
 			url:    name + "/manifests/" + digest,
 			method: "DELETE",
 		}
-		resp := apiRequest(req)
+		resp := req.apiRequest()
 		if resp.StatusCode != 202 {
-			log.Fatalf("There was an error while attempting to delete %s", digest)
+			return errors.New(fmt.Sprintf("There was an error while attempting to delete %s", digest))
 		}
 	}
+	return nil
 }
 
 func getImageDigest(name string, tag string) string {
@@ -52,7 +53,7 @@ func getImageDigest(name string, tag string) string {
 		header:          "Accept",
 		headerDirective: "application/vnd.docker.distribution.manifest.v2+json",
 	}
-	resp := apiRequest(req)
+	resp := req.apiRequest()
 	return resp.Header["Docker-Content-Digest"][0]
 }
 
@@ -60,7 +61,7 @@ func getTags(name string) []string {
 	req := apiReqData{
 		url: name + "/tags/list/",
 	}
-	resp := apiRequest(req)
+	resp := req.apiRequest()
 	body := decodeBody(resp)
 	intTags := body.(map[string]interface{})["tags"].([]interface{})
 	var tags []string = nil
@@ -74,7 +75,7 @@ func getManifest(name string, tag string) (string, string) {
 	req := apiReqData{
 		url: name + "/manifests/" + tag,
 	}
-	resp := apiRequest(req)
+	resp := req.apiRequest()
 	body := decodeBody(resp)
 	// Only care about newest layer
 	manifest := body.(map[string]interface{})["fsLayers"].([]interface{})[0].(map[string]interface{})["blobSum"].(string)
