@@ -24,7 +24,7 @@ func (apiCall apiReqData) apiRequest() *http.Response {
 	req, err := http.NewRequest(apiCall.method, apiCall.url, strings.NewReader(apiCall.body))
 	errCheck(err)
 	if apiCall.header != nil {
-		for x, _ := range apiCall.header {
+		for x := range apiCall.header {
 			req.Header.Add(apiCall.header[x], apiCall.headerDirective[x])
 		}
 	}
