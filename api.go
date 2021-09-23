@@ -7,7 +7,8 @@ import (
 )
 
 type apiReqData struct {
-	method, url, body, headerDirective, header string
+	method, url, body       string
+	headerDirective, header []string
 }
 
 func (setDefault *apiReqData) apiDefaults() {
@@ -22,8 +23,10 @@ func (apiCall apiReqData) apiRequest() *http.Response {
 	client := &http.Client{}
 	req, err := http.NewRequest(apiCall.method, apiCall.url, strings.NewReader(apiCall.body))
 	errCheck(err)
-	if apiCall.header != "" {
-		req.Header.Add(apiCall.header, apiCall.headerDirective)
+	if apiCall.header != nil {
+		for x, _ := range apiCall.header {
+			req.Header.Add(apiCall.header[x], apiCall.headerDirective[x])
+		}
 	}
 	resp, err := client.Do(req)
 	errCheck(err)
@@ -49,8 +52,8 @@ func getImageDigest(name string, tag string) string {
 	// Same endpoint as manifests, but adding header make registry reply with digest
 	req := apiReqData{
 		url:             name + "/manifests/" + tag,
-		header:          "Accept",
-		headerDirective: "application/vnd.docker.distribution.manifest.v2+json",
+		header:          []string{"Accept"},
+		headerDirective: []string{"application/vnd.docker.distribution.manifest.v2+json"},
 	}
 	resp := req.apiRequest()
 	return resp.Header["Docker-Content-Digest"][0]

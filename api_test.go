@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"gotest.tools/assert"
@@ -18,21 +19,30 @@ func TestApiDefaults(t *testing.T) {
 }
 
 func TestApiRequest(t *testing.T) {
-	srv := serverMock("/", "ok")
-	defer srv.Close()
-
-	req := apiReqData{
-		url: srv.URL,
+	requestTypes := []struct {
+		method, response, body  string
+		header, headerDirective []string
+	}{
+		{"GET", "ok", "", nil, nil},
+		{"GET", "ok", "", []string{"FOO", "auth"}, []string{"BAR", "bearer"}},
+		{"DELETE", "accepted", "", []string{"Accept"}, []string{"application/vnd.docker.distribution.manifest.v2+json"}},
 	}
-	resp := req.apiRequest()
-	assert.Assert(t, len(resp.Request.Header) == 0)
-	assert.Assert(t, resp.Request.Method == "GET")
 
-	req.header = "FOO"
-	req.headerDirective = "Bar"
-	resp = req.apiRequest()
-	assert.Assert(t, len(resp.Request.Header) == 1)
-	assert.Assert(t, resp.Request.Method == "GET")
+	for _, request := range requestTypes {
+		srv := serverMock("/", request.response)
+		req := apiReqData{
+			url:             srv.URL,
+			header:          request.header,
+			headerDirective: request.headerDirective,
+			body:            request.body,
+			method:          request.method,
+		}
+		resp := req.apiRequest()
+		assert.Assert(t, len(resp.Request.Header) == len(req.header))
+		assert.Assert(t, resp.Request.Method == req.method)
+		assert.Assert(t, strings.Contains(strings.ToLower(resp.Status), request.response))
+		srv.Close()
+	}
 
 }
 
