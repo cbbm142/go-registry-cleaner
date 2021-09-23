@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -40,7 +39,7 @@ func deleteDigest(name string, digest string, tag string, dryRun bool) error {
 		}
 		resp := req.apiRequest()
 		if resp.StatusCode != 202 {
-			return errors.New(fmt.Sprintf("There was an error while attempting to delete %s", digest))
+			return fmt.Errorf("there was an error while attempting to delete %s", digest)
 		}
 	}
 	return nil
