@@ -8,7 +8,7 @@ To use supply a config.yml set up for your repoistory and images you want to cle
 
 You can also use the included Dockerfile to build and run it as a container, or use the one supplied on Docker Hub.  Here is an example to run it.
 
-`docker run -v ./config.yml:/app/config.yml -e username=user -e password=pass -it cbbm142/go-registry-cleaner`
+`docker run -v $(pwd)/config.yml:/app/config.yml -e username=user -e password=pass -it cbbm142/go-registry-cleaner`
 
 I make no guarantees this works correctly, and you should always use the dryRun option before attempting to delete any images.
 

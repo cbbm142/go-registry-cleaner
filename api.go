@@ -34,7 +34,7 @@ func (apiCall apiReqData) apiRequest() *http.Response {
 }
 
 func deleteDigest(name string, digest string, tag string, dryRun bool) error {
-	fmt.Printf("Deleting digest %s for tag %s for repo %s.", digest, tag, name)
+	fmt.Printf("Deleting digest %s for tag %s for repo %s.\n", digest, tag, name)
 	if !dryRun {
 		req := apiReqData{
 			url:    name + "/manifests/" + digest,
