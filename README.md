@@ -1,3 +1,4 @@
+[![codecov](https://codecov.io/gh/cbbm142/go-registry-cleaner/branch/main/graph/badge.svg?token=43UESZJV3S)](https://codecov.io/gh/cbbm142/go-registry-cleaner)
 
 ## Go-Registry-Cleaner
 
