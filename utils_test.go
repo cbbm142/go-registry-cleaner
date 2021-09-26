@@ -16,12 +16,6 @@ var config map[interface{}]interface{}
 
 var ignoreTags = []string{"latest", "prod"}
 
-// type mockRepo struct {
-// 	name string
-// 	tags []string
-// 	days int
-// }
-
 func init() {
 	configFile = "config.yml.example"
 	config = readConfig(configFile)
