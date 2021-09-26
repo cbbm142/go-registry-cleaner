@@ -23,7 +23,7 @@ func main() {
 		tags: config["defaultTags"].([]interface{}),
 		days: config["defaultDays"].(int),
 	}
-	errCheck(godotenv.Load())
+	_ = godotenv.Load()
 	registryUser = os.Getenv("username")
 	registryPassword = os.Getenv("password")
 	registryUrl = buildUrl(config["host"])
