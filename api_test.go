@@ -65,16 +65,34 @@ func TestApiRequest(t *testing.T) {
 }
 
 func TestDeleteDigest(t *testing.T) {
-
 	digest := mockSha
 	tag := "1"
-	dryRun := false
 	name := "/v2/test/image"
-	srv := serverMock(fmt.Sprintf("%s/manifests/%s", name, digest), "accepted")
-	defer srv.Close()
-
-	err := deleteDigest(srv.URL+name, digest, tag, dryRun)
-	assert.Assert(t, err == nil)
+	var err error
+	var responseCode string
+	testsToRun := []struct {
+		dryRun      bool
+		expectedErr bool
+	}{
+		{dryRun: true, expectedErr: false},
+		{dryRun: false, expectedErr: false},
+		{dryRun: false, expectedErr: true},
+	}
+	for _, testCase := range testsToRun {
+		if testCase.dryRun || testCase.expectedErr {
+			responseCode = "ok"
+		} else {
+			responseCode = "accepted"
+		}
+		srv := serverMock(fmt.Sprintf("%s/manifests/%s", name, digest), responseCode)
+		err = deleteDigest(srv.URL+name, digest, tag, testCase.dryRun)
+		srv.Close()
+		if testCase.expectedErr {
+			assert.Assert(t, err != nil)
+		} else {
+			assert.Assert(t, err == nil)
+		}
+	}
 }
 
 func TestGetImageDigest(t *testing.T) {
