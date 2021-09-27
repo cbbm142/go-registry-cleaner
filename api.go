@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -15,7 +16,7 @@ func (setDefault *apiReqData) apiDefaults() {
 	if setDefault.method == "" {
 		setDefault.method = "GET"
 	}
-	setDefault.url = registryUrl + setDefault.url
+	setDefault.url = os.Getenv("registryUrl") + setDefault.url
 }
 
 func (apiCall apiReqData) apiRequest() *http.Response {

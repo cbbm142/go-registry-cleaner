@@ -12,13 +12,9 @@ import (
 	"gotest.tools/assert"
 )
 
-var config map[interface{}]interface{}
-
 var ignoreTags = []string{"latest", "prod"}
 
 func init() {
-	configFile = "config.yml.example"
-	config = readConfig(configFile)
 	ignoreValues = ignores{
 		days: 30,
 	}
@@ -41,10 +37,11 @@ func TestDecodeBody(t *testing.T) {
 }
 
 func TestBuildUrl(t *testing.T) {
-	registryUser = "testUser"
-	registryPassword = "testPass"
-	testUrl := buildUrl(config["host"])
-	var testItems = []string{registryUser, registryPassword, "registry.example.com"}
+	registryUser := "testUser"
+	registryPassword := "testPass"
+	mockRegistry := "docker.registry.corp.com"
+	testUrl := buildUrl(mockRegistry, registryUser, registryPassword)
+	var testItems = []string{registryUser, registryPassword, mockRegistry}
 	for _, item := range testItems {
 		if !strings.Contains(testUrl, item) {
 			t.Errorf("Missing %s from url %s", item, testUrl)

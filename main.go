@@ -12,26 +12,42 @@ type ignores struct {
 	tags []interface{}
 	days int
 }
+type config struct {
+	configMap        map[interface{}]interface{}
+	ignoreValues     ignores
+	registryUser     string
+	registryPassword string
+	dryRun           bool
+}
 
 var ignoreValues ignores = ignores{}
-var configFile, registryPassword, registryUrl, registryUser string = "", "", "", ""
 
-func main() {
-	configFile = "config.yml"
-	config := readConfig(configFile)
-	ignoreValues = ignores{
-		tags: config["defaultTags"].([]interface{}),
-		days: config["defaultDays"].(int),
+func loadConfig(configFile string) config {
+	var appConfig config
+	appConfig.configMap = readConfig(configFile)
+	appConfig.ignoreValues = ignores{
+		tags: appConfig.configMap["defaultTags"].([]interface{}),
+		days: appConfig.configMap["defaultDays"].(int),
 	}
 	_ = godotenv.Load()
-	registryUser = os.Getenv("username")
-	registryPassword = os.Getenv("password")
-	registryUrl = buildUrl(config["host"])
-	dryRun := config["dryRun"].(bool)
-	for _, repo := range config["repos"].([]interface{}) {
+	appConfig.registryUser = os.Getenv("username")
+	appConfig.registryPassword = os.Getenv("password")
+	appConfig.dryRun = appConfig.configMap["dryRun"].(bool)
+	os.Setenv("registryUrl", buildUrl(appConfig.configMap["host"], appConfig.registryUser, appConfig.registryPassword))
+	return appConfig
+}
+
+func main() {
+	var configFile = "config.yml"
+	var appConfig config = loadConfig(configFile)
+	for _, repo := range appConfig.configMap["repos"].([]interface{}) {
 		var name string = repo.(map[string]interface{})["name"].(string)
-		combineTags(repo, &ignoreValues)
-		setDays(config["defaultDays"], repo, &ignoreValues)
+		if _, tagsExist := repo.(map[string]interface{})["tags"]; tagsExist {
+			combineTags(repo, &appConfig.ignoreValues)
+		}
+		if _, daysExist := repo.(map[string]interface{})["days"]; daysExist {
+			setDays(appConfig.configMap["defaultDays"], repo, &appConfig.ignoreValues)
+		}
 		registryTags := getTags(name)
 		for _, tag := range registryTags {
 			if checkTag(tag) {
@@ -40,7 +56,7 @@ func main() {
 				if checkStale(creationTime, ignoreValues) {
 					// Deletion is done via digest not tag/manifest
 					digest := getImageDigest(name, tag)
-					err := deleteDigest(name, digest, tag, dryRun)
+					err := deleteDigest(name, digest, tag, appConfig.dryRun)
 					errCheck(err)
 				}
 			}

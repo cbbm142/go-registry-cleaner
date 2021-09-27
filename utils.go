@@ -21,12 +21,12 @@ func decodeBody(resp *http.Response) interface{} {
 	return body
 }
 
-func buildUrl(host interface{}) string {
+func buildUrl(host interface{}, user string, password string) string {
 	builder := strings.Builder{}
 	builder.WriteString("https://")
-	builder.WriteString(registryUser)
+	builder.WriteString(user)
 	builder.WriteString(":")
-	builder.WriteString(registryPassword)
+	builder.WriteString(password)
 	builder.WriteString("@")
 	builder.WriteString(host.(string))
 	builder.WriteString("/v2/")
