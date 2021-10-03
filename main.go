@@ -17,10 +17,13 @@ type config struct {
 	ignoreValues     ignores
 	registryUser     string
 	registryPassword string
+	registryToken    string
 	dryRun           bool
 }
 
 var ignoreValues ignores = ignores{}
+var bearerToken string
+var basicAuth bool = false
 
 func loadConfig(configFile string) config {
 	var appConfig config
@@ -32,6 +35,7 @@ func loadConfig(configFile string) config {
 	_ = godotenv.Load()
 	appConfig.registryUser = os.Getenv("username")
 	appConfig.registryPassword = os.Getenv("password")
+	appConfig.registryToken = os.Getenv("token")
 	appConfig.dryRun = appConfig.configMap["dryRun"].(bool)
 	os.Setenv("registryUrl", buildUrl(appConfig.configMap["host"], appConfig.registryUser, appConfig.registryPassword))
 	return appConfig
@@ -40,6 +44,8 @@ func loadConfig(configFile string) config {
 func main() {
 	var configFile = "config.yml"
 	var appConfig config = loadConfig(configFile)
+	err := authDetect(appConfig)
+	errCheck(err)
 	for _, repo := range appConfig.configMap["repos"].([]interface{}) {
 		var name string = repo.(map[string]interface{})["name"].(string)
 		if _, tagsExist := repo.(map[string]interface{})["tags"]; tagsExist {

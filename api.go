@@ -17,6 +17,10 @@ func (setDefault *apiReqData) apiDefaults() {
 		setDefault.method = "GET"
 	}
 	setDefault.url = os.Getenv("registryUrl") + setDefault.url
+	if bearerToken != "" {
+		setDefault.header = append(setDefault.header, "Authorization")
+		setDefault.headerDirective = append(setDefault.headerDirective, fmt.Sprintf("Bearer %s", bearerToken))
+	}
 }
 
 func (apiCall apiReqData) apiRequest() *http.Response {
