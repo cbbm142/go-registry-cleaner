@@ -12,15 +12,22 @@ type authResponse struct {
 }
 
 func authDetect(appConfig config) error {
-	resp, err := http.Get(appConfig.configMap["host"].(string))
-	errCheck(err)
+	var protocol string
+	if appConfig.httpsProtocol {
+		protocol = "https://"
+	} else {
+		protocol = "http://"
+	}
+	resp, err := http.Get(fmt.Sprintf("%s%s", protocol, appConfig.configMap["host"].(string)))
+	if err != nil {
+		return err
+	}
 	switch resp.StatusCode {
 	case 200:
-		fmt.Println("noauth")
+		// No auth needed
 		bearerToken = ""
 		basicAuth = false
 	case 401:
-		fmt.Println("auth")
 		if strings.Contains(resp.Header["Www-Authenticate"][0], "Bearer realm") {
 			var parsedResponse authResponse = parseAuth(resp.Header["Www-Authenticate"][0])
 			bearerToken = getToken(parsedResponse, appConfig.registryUser, appConfig.registryToken)
@@ -28,10 +35,10 @@ func authDetect(appConfig config) error {
 			bearerToken = ""
 			basicAuth = true
 		} else {
-			return fmt.Errorf("Unable to determine auth type")
+			return fmt.Errorf("unable to determine auth type")
 		}
 	default:
-		return fmt.Errorf("It appears the registry either doesn't exist, or doesn't support the v2 api.")
+		return fmt.Errorf("it appears the registry either doesn't exist, or doesn't support the v2 api")
 	}
 	return nil
 }
@@ -56,9 +63,12 @@ func getToken(auth authResponse, user string, token string) string {
 }
 
 func parseAuth(authHeader string) authResponse {
+	// Only used for oauth
 	var authDirectives authResponse = authResponse{}
 	for _, directive := range strings.Split(authHeader, ",") {
-		fmt.Println(directive)
+		if authDirectives.scope != "" {
+			authDirectives.scope = authDirectives.scope + "," + strings.Split(directive, "\"")[0]
+		}
 		switch {
 		case strings.Contains(directive, "Bearer realm"):
 			authDirectives.realm = strings.Split(directive, "\"")[1]

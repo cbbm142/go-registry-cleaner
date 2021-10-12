@@ -19,6 +19,7 @@ type testBody struct {
 	Tags     []string      `json:"tags"`
 	Fslayers []interface{} `json:"fsLayers"`
 	History  []interface{} `json:"history"`
+	Token    string        `json:"token"`
 }
 type mockV1Compat struct {
 	V1Compatibility string `json:"v1Compatibility"`
@@ -144,6 +145,8 @@ func serverMock(url string, header string) *httptest.Server {
 		handler.HandleFunc(url, returnDigest)
 	case "body":
 		handler.HandleFunc(url, returnBody)
+	case "basicAuthRequired":
+		handler.HandleFunc(url, mockBasicAuthRequired)
 	}
 
 	srv := httptest.NewServer(handler)
@@ -169,6 +172,7 @@ func createMockBody() testBody {
 		Tags:     mockTags,
 		Fslayers: mockFslayer,
 		History:  mockHistroy,
+		Token:    "adsa-kyuj-426tgv-sdhgb6t5rgf-dq3d2-sdfdsf",
 	}
 	return mockBody
 }
@@ -177,6 +181,12 @@ func createMockBody() testBody {
 func mockAccepted(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 
+}
+
+func mockBasicAuthRequired(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Www-Authenticate", "Basic-auth-here")
+	w.WriteHeader(http.StatusUnauthorized)
 }
 
 func mockOk(w http.ResponseWriter, r *http.Request) {
