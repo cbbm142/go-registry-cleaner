@@ -37,14 +37,33 @@ func TestDecodeBody(t *testing.T) {
 }
 
 func TestBuildUrl(t *testing.T) {
-	registryUser := "testUser"
-	registryPassword := "testPass"
-	mockRegistry := "docker.registry.corp.com"
-	testUrl := buildUrl(mockRegistry, registryUser, registryPassword)
-	var testItems = []string{registryUser, registryPassword, mockRegistry}
-	for _, item := range testItems {
-		if !strings.Contains(testUrl, item) {
-			t.Errorf("Missing %s from url %s", item, testUrl)
+	testCase := []struct {
+		useBasic, https                              bool
+		registryUser, registryPassword, mockRegistry string
+	}{
+		{true, false, "exampleUser", "examplePass", "registry.corp.example.com"},
+		{false, false, "exampleUser2", "anotherPass", "registry.localhost"},
+		{true, true, "exampleUser", "examplePass", "registry.corp.example.com"},
+		{false, true, "exampleUser2", "anotherPass", "registry.localhost"},
+	}
+	for _, scenario := range testCase {
+		basicAuth = false
+		basicAuth = scenario.useBasic
+		testUrl := buildUrl(scenario.mockRegistry, scenario.https, scenario.registryUser, scenario.registryPassword)
+		assert.Assert(t, strings.Contains(testUrl, scenario.mockRegistry))
+		if scenario.useBasic {
+			assert.Assert(t, strings.Contains(testUrl, scenario.registryUser))
+			assert.Assert(t, strings.Contains(testUrl, "@"))
+			assert.Assert(t, strings.Contains(testUrl, scenario.registryPassword))
+		} else {
+			assert.Assert(t, !strings.Contains(testUrl, scenario.registryUser))
+			assert.Assert(t, !strings.Contains(testUrl, "@"))
+			assert.Assert(t, !strings.Contains(testUrl, scenario.registryPassword))
+		}
+		if scenario.https {
+			assert.Assert(t, strings.Contains(testUrl, "https://"))
+		} else {
+			assert.Assert(t, strings.Contains(testUrl, "http://"))
 		}
 	}
 }

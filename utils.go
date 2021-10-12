@@ -21,9 +21,13 @@ func decodeBody(resp *http.Response) interface{} {
 	return body
 }
 
-func buildUrl(host interface{}, user string, password string) string {
+func buildUrl(host interface{}, https bool, user string, password string) string {
 	builder := strings.Builder{}
-	builder.WriteString("https://")
+	if https {
+		builder.WriteString("https://")
+	} else {
+		builder.WriteString("http://")
+	}
 	if basicAuth {
 		builder.WriteString(user)
 		builder.WriteString(":")
