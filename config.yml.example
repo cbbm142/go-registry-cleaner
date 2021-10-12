@@ -3,7 +3,8 @@ defaultTags:
   - latest
   - prod
 dryRun: true
-host: registry.example.com 
+host: registry.example.com
+https: true
 repos:
   - name: repo/name
     tags:
